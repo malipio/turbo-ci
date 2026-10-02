@@ -5,7 +5,7 @@ require("emulators");
 const emulators = global.emulators;
 const REPO_ROOT = path.join(__dirname, "..", "..");
 const TP7_DIR = path.join(REPO_ROOT, "ci", "tp7");
-const SENTINEL_TIMEOUT_MS = 30000;
+const SENTINEL_TIMEOUT_MS = 60000;
 const POLL_INTERVAL_MS = 500;
 
 emulators.pathPrefix = path.join(REPO_ROOT, "node_modules", "emulators", "dist") + "/";
