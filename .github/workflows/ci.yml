@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  build-and-run:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,7 +16,7 @@ jobs:
 
       - run: npm ci
 
-      - name: Compile and run Turbo Pascal examples
+      - name: Compile Turbo Pascal examples
         run: |
           set -e
           for f in src/*.pas; do
