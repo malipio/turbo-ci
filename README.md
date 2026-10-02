@@ -3,8 +3,7 @@
 [![CI](https://github.com/malipio/turbo-ci/actions/workflows/ci.yml/badge.svg)](https://github.com/malipio/turbo-ci/actions/workflows/ci.yml)
 [![Pages](https://github.com/malipio/turbo-ci/actions/workflows/pages.yml/badge.svg)](https://github.com/malipio/turbo-ci/actions/workflows/pages.yml)
 
-Headless CI for Turbo Pascal 7.0 / DOS code, plus an interactive in-browser
-demo.
+CI for Turbo Pascal 7.0 / DOS code, plus an interactive in-browser demo.
 
 **Live demo:** https://malipio.github.io/turbo-ci/ — compiles and runs
 [`src/hello.pas`](src/hello.pas) interactively, right in your browser.
