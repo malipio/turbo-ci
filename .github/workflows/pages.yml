@@ -1,0 +1,60 @@
+name: Pages
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  deploy-main:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - run: node ci/fetch-tp7.js
+
+      - run: node ci/build-site.js
+
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist-site
+          keep_files: true
+
+  deploy-pr-preview:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        if: github.event.action != 'closed'
+        with:
+          node-version: 20
+
+      - run: npm ci
+        if: github.event.action != 'closed'
+
+      - run: node ci/fetch-tp7.js
+        if: github.event.action != 'closed'
+
+      - run: node ci/build-site.js
+        if: github.event.action != 'closed'
+
+      - uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: dist-site

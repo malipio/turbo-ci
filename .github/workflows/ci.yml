@@ -16,6 +16,8 @@ jobs:
 
       - run: npm ci
 
+      - run: node ci/fetch-tp7.js
+
       - name: Compile Turbo Pascal examples
         run: |
           set -e

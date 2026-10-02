@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>turbo-ci: hello.pas in js-dos</title>
+  <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css" />
+  <style>
+    body {
+      margin: 0;
+      padding: 1.5rem;
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #eee;
+    }
+    h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    p {
+      max-width: 40em;
+      color: #aaa;
+    }
+    #dos {
+      width: 640px;
+      max-width: 100%;
+      aspect-ratio: 4 / 3;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>src/hello.pas, compiled with Turbo Pascal 7.0</h1>
+  <p>
+    This session boots DOSBox and runs <code>HELLO.EXE</code>, already
+    compiled from <code>src/hello.pas</code> with Turbo Pascal 7.0's
+    <code>TPC.EXE</code>, and then leaves you at an interactive DOS prompt.
+  </p>
+  <div id="dos"></div>
+  <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
+  <script>
+    Dos(document.getElementById("dos"), { url: "hello.jsdos" });
+  </script>
+</body>
+</html>
