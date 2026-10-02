@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "CI for Turbo Pascal 7.0 / DOS code",
   "private": true,
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "emulators": "^8.5.2"
