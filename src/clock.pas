@@ -1,10 +1,15 @@
 program Clock;
 
-{ Analog clock demo using the BGI graphics unit (Graph), Crt (KeyPressed/
-  Delay) and Dos (GetTime). Updates once a second. Press any key to quit.
+{ Analog clock demo using the BGI graphics unit (Graph), Crt (Delay) and
+  Dos (GetTime). Redraws at roughly 30 frames/second, sweeping the hands
+  smoothly using GetTime's hundredths-of-a-second field rather than
+  jumping once a second - though the real achievable smoothness is capped
+  by DOS's ~18.2Hz BIOS timer tick (~55ms resolution) that Hundredths is
+  itself derived from, regardless of how often we redraw. Press any key
+  to quit.
 
   Flicker-free without true hardware double buffering: the face is drawn
-  once and never touched again; each tick erases only the previous hand
+  once and never touched again; each frame erases only the previous hand
   lines (redrawing them in black) before drawing the new ones, instead of
   clearing and redrawing the whole screen. BGI has no portable way to
   render to an off-screen bitmap, and classic VGA 640x480x16 (the mode
@@ -15,12 +20,12 @@ uses Crt, Dos, Graph;
 
 const
   TickCount = 12;
+  FrameDelayMs = 33; { ~30 frames/second }
 
 var
   GraphDriver, GraphMode, ErrorCode: Integer;
   CenterX, CenterY, FaceRadius: Integer;
   Hour, Minute, Second, Hundredths: Word;
-  LastSecond: Integer;
   HaveHands: Boolean;
   PrevHourX, PrevHourY, PrevMinuteX, PrevMinuteY, PrevSecondX, PrevSecondY: Integer;
 
@@ -80,12 +85,13 @@ end;
 
 procedure DrawHands;
 var
-  HourTheta, MinuteTheta, SecondTheta: Real;
+  FracSecond, HourTheta, MinuteTheta, SecondTheta: Real;
   HandX, HandY: Integer;
 begin
-  HourTheta := (Hour mod 12 + Minute / 60.0) * (2 * Pi / 12);
-  MinuteTheta := (Minute + Second / 60.0) * (2 * Pi / 60);
-  SecondTheta := Second * (2 * Pi / 60);
+  FracSecond := Second + Hundredths / 100.0;
+  HourTheta := (Hour mod 12 + (Minute + FracSecond / 60.0) / 60.0) * (2 * Pi / 12);
+  MinuteTheta := (Minute + FracSecond / 60.0) * (2 * Pi / 60);
+  SecondTheta := FracSecond * (2 * Pi / 60);
 
   SetColor(White);
   HandPoint(HourTheta, Round(FaceRadius * 0.5), HandX, HandY);
@@ -107,31 +113,15 @@ begin
   HaveHands := True;
 end;
 
-procedure WaitTick;
-var
-  i: Integer;
-begin
-  for i := 1 to 10 do
-  begin
-    if KeyPressed then Exit;
-    Delay(100);
-  end;
-end;
-
 begin
   InitGraphics;
   DrawFace;
   HaveHands := False;
-  LastSecond := -1;
   repeat
     GetTime(Hour, Minute, Second, Hundredths);
-    if Second <> LastSecond then
-    begin
-      EraseHands;
-      DrawHands;
-      LastSecond := Second;
-    end;
-    WaitTick;
+    EraseHands;
+    DrawHands;
+    Delay(FrameDelayMs);
   until KeyPressed;
   CloseGraph;
 end.
