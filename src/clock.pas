@@ -2,11 +2,14 @@ program Clock;
 
 { Analog clock demo using the BGI graphics unit (Graph), Crt (Delay) and
   Dos (GetTime). Redraws at roughly 30 frames/second, sweeping the hands
-  smoothly using GetTime's hundredths-of-a-second field rather than
-  jumping once a second - though the real achievable smoothness is capped
-  by DOS's ~18.2Hz BIOS timer tick (~55ms resolution) that Hundredths is
-  itself derived from, regardless of how often we redraw. Press any key
-  to quit.
+  smoothly. GetTime's Hundredths field alone isn't enough for that - it's
+  itself derived from the PC's ~18.2Hz BIOS timer tick, so it only
+  actually changes about every 55ms no matter how often we redraw. To
+  fill in the gap, TickFraction reads the 8253 timer chip's countdown
+  counter directly (a simple, standard, read-only I/O port access - this
+  doesn't reprogram the timer, so it has no effect on Delay() or anything
+  else) to find out how far we are into the current tick, giving smooth
+  sub-tick motion. Press any key to quit.
 
   Flicker-free without true hardware double buffering: the face is drawn
   once and never touched again; each frame erases only the previous hand
@@ -21,6 +24,7 @@ uses Crt, Dos, Graph;
 const
   TickCount = 12;
   FrameDelayMs = 33; { ~30 frames/second }
+  PitHz = 1193182.0 / 65536.0; { the PC's standard 8253 timer tick rate, ~18.2065Hz }
 
 var
   GraphDriver, GraphMode, ErrorCode: Integer;
@@ -47,6 +51,20 @@ begin
     FaceRadius := CenterY - 20;
 
   SetLineStyle(SolidLn, 0, ThickWidth);
+end;
+
+{ How far (0.0 to 1.0) we are into the 8253 timer's current countdown,
+  which wraps once per BIOS tick (~54.9ms) - see the header comment. }
+function TickFraction: Real;
+var
+  Lo, Hi: Byte;
+  Count: Word;
+begin
+  Port[$43] := $00; { latch channel 0's current count }
+  Lo := Port[$40];
+  Hi := Port[$40];
+  Count := Hi * 256 + Lo;
+  TickFraction := (65536 - Count) / 65536.0;
 end;
 
 { Theta is measured clockwise from 12 o'clock, in radians. }
@@ -88,7 +106,7 @@ var
   FracSecond, HourTheta, MinuteTheta, SecondTheta: Real;
   HandX, HandY: Integer;
 begin
-  FracSecond := Second + Hundredths / 100.0;
+  FracSecond := Second + Hundredths / 100.0 + TickFraction / PitHz;
   HourTheta := (Hour mod 12 + (Minute + FracSecond / 60.0) / 60.0) * (2 * Pi / 12);
   MinuteTheta := (Minute + FracSecond / 60.0) * (2 * Pi / 60);
   SecondTheta := FracSecond * (2 * Pi / 60);
