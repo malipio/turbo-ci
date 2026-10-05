@@ -1,9 +1,15 @@
 program Clock;
 
 { Analog clock demo using the BGI graphics unit (Graph), Crt (KeyPressed/
-  Delay) and Dos (GetTime). Redraws the whole face once a second; this
-  causes a visible one-frame flicker (no double buffering here), which is
-  an accepted trade-off for keeping this demo simple. Press any key to quit. }
+  Delay) and Dos (GetTime). Updates once a second. Press any key to quit.
+
+  Flicker-free without true hardware double buffering: the face is drawn
+  once and never touched again; each tick erases only the previous hand
+  lines (redrawing them in black) before drawing the new ones, instead of
+  clearing and redrawing the whole screen. BGI has no portable way to
+  render to an off-screen bitmap, and classic VGA 640x480x16 (the mode
+  InitGraph picks here) only has one real hardware page to flip to, so
+  SetActivePage/SetVisualPage page-flipping isn't a reliable option. }
 
 uses Crt, Dos, Graph;
 
@@ -15,6 +21,8 @@ var
   CenterX, CenterY, FaceRadius: Integer;
   Hour, Minute, Second, Hundredths: Word;
   LastSecond: Integer;
+  HaveHands: Boolean;
+  PrevHourX, PrevHourY, PrevMinuteX, PrevMinuteY, PrevSecondX, PrevSecondY: Integer;
 
 procedure InitGraphics;
 begin
@@ -32,6 +40,8 @@ begin
     FaceRadius := CenterX - 20
   else
     FaceRadius := CenterY - 20;
+
+  SetLineStyle(SolidLn, 0, ThickWidth);
 end;
 
 { Theta is measured clockwise from 12 o'clock, in radians. }
@@ -59,6 +69,15 @@ begin
   Circle(CenterX, CenterY, 3);
 end;
 
+procedure EraseHands;
+begin
+  if not HaveHands then Exit;
+  SetColor(Black);
+  Line(CenterX, CenterY, PrevHourX, PrevHourY);
+  Line(CenterX, CenterY, PrevMinuteX, PrevMinuteY);
+  Line(CenterX, CenterY, PrevSecondX, PrevSecondY);
+end;
+
 procedure DrawHands;
 var
   HourTheta, MinuteTheta, SecondTheta: Real;
@@ -71,13 +90,21 @@ begin
   SetColor(White);
   HandPoint(HourTheta, Round(FaceRadius * 0.5), HandX, HandY);
   Line(CenterX, CenterY, HandX, HandY);
+  PrevHourX := HandX;
+  PrevHourY := HandY;
 
   HandPoint(MinuteTheta, Round(FaceRadius * 0.8), HandX, HandY);
   Line(CenterX, CenterY, HandX, HandY);
+  PrevMinuteX := HandX;
+  PrevMinuteY := HandY;
 
   SetColor(LightRed);
   HandPoint(SecondTheta, Round(FaceRadius * 0.9), HandX, HandY);
   Line(CenterX, CenterY, HandX, HandY);
+  PrevSecondX := HandX;
+  PrevSecondY := HandY;
+
+  HaveHands := True;
 end;
 
 procedure WaitTick;
@@ -93,13 +120,14 @@ end;
 
 begin
   InitGraphics;
+  DrawFace;
+  HaveHands := False;
   LastSecond := -1;
   repeat
     GetTime(Hour, Minute, Second, Hundredths);
     if Second <> LastSecond then
     begin
-      ClearDevice;
-      DrawFace;
+      EraseHands;
       DrawHands;
       LastSecond := Second;
     end;
