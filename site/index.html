@@ -77,13 +77,26 @@
         "Running " + example.bundle + ", compiled from src/" + example.file +
         " with Turbo Pascal 7.0. " + example.description;
 
-      if (current) {
-        await current.stop();
+      try {
+        if (current) {
+          await current.stop();
+          current = null;
+        }
+        await new Promise((resolve) => {
+          current = Dos(container, {
+            url: example.bundle,
+            onEvent(event) {
+              if (event === "ci-ready") resolve();
+            },
+          });
+        });
+      } catch (error) {
+        console.error("Unable to run example", error);
+        description.textContent = "Unable to run " + example.bundle + ": " + error;
+      } finally {
+        for (const button of picker.children) button.disabled = false;
+        switching = false;
       }
-      current = Dos(container, { url: example.bundle });
-
-      for (const button of picker.children) button.disabled = false;
-      switching = false;
     }
 
     for (const example of EXAMPLES) {

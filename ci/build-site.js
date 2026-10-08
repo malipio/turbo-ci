@@ -25,10 +25,13 @@ const EXAMPLES = [
 
 async function buildExample(example) {
   const sourcePath = path.join(REPO_ROOT, "src", example.file);
-  const { name, compileLog, exeBytes } = await compileProgram(sourcePath, { backend: "dosbox" });
-  if (exeBytes === null) {
+  const { name, sentinelFound, compileLog, exeBytes } = await compileProgram(sourcePath, { backend: "dosbox" });
+  if (!sentinelFound || exeBytes === null) {
     console.error(`--- COMPILE.LOG (${example.file}) ---`);
     console.error(compileLog);
+    if (!sentinelFound) {
+      throw new Error(`${sourcePath}: DOS session did not finish within the timeout (hung or crashed)`);
+    }
     throw new Error(`${sourcePath} did not produce an .EXE (compile error)`);
   }
 
