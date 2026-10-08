@@ -6,12 +6,17 @@ const { execFileSync } = require("child_process");
 const REPO_ROOT = path.join(__dirname, "..");
 const TP7_DIR = path.join(REPO_ROOT, "ci", "tp7");
 const ARCHIVE_URL = "https://archive.org/download/tp_20240418/TP.zip";
-const NEEDED_FILES = ["TPC.EXE", "TURBO.TPL"];
+const NEEDED_FILES = ["TPC.EXE", "TURBO.TPL", "GRAPH.TPU", "EGAVGA.BGI"];
 
 // Turbo Pascal 7.0 was never released as freeware by Borland/Embarcadero (only
 // 1.0, 3.02, and 5.5 were). We don't vendor it in this repo - see NOTICE.md.
 // Instead we fetch it transiently here, at build/CI time, and only keep the
-// two files actually needed to compile: the compiler and its unit library.
+// files actually needed to compile and run the demos: the compiler and its
+// default unit library, plus GRAPH.TPU (needed at *compile* time for any
+// `uses Graph;` program - unlike Dos/Crt, Graph isn't prelinked into
+// TURBO.TPL) and EGAVGA.BGI (the VGA driver InitGraph loads from disk at
+// *runtime* - CI never runs compiled .EXEs, so this one is only needed by
+// the live browser demo in ci/build-site.js, not by ci/run-dos.js).
 function alreadyFetched() {
   return NEEDED_FILES.every((f) => fs.existsSync(path.join(TP7_DIR, f)));
 }

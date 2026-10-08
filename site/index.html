@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>turbo-ci: hello.pas in js-dos</title>
+  <title>turbo-ci: Turbo Pascal 7.0 demos in js-dos</title>
   <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css" />
   <style>
     body {
@@ -20,7 +20,27 @@
       max-width: 40em;
       color: #aaa;
     }
-    #dos {
+    #picker {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    #picker button {
+      background: #222;
+      color: #eee;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 0.4rem 0.8rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    #picker button.active {
+      background: #345;
+      border-color: #5af;
+    }
+    #dos-container {
       width: 640px;
       max-width: 100%;
       aspect-ratio: 4 / 3;
@@ -29,16 +49,65 @@
   </style>
 </head>
 <body>
-  <h1>src/hello.pas, compiled with Turbo Pascal 7.0</h1>
-  <p>
-    This session boots DOSBox and runs <code>HELLO.EXE</code>, already
-    compiled from <code>src/hello.pas</code> with Turbo Pascal 7.0's
-    <code>TPC.EXE</code>, and then leaves you at an interactive DOS prompt.
-  </p>
-  <div id="dos"></div>
+  <h1>Turbo Pascal 7.0 demos, compiled and run in your browser</h1>
+  <p id="description"></p>
+  <div id="picker"></div>
+  <div id="dos-container"></div>
+
   <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
   <script>
-    Dos(document.getElementById("dos"), { url: "hello.jsdos" });
+    const EXAMPLES = __EXAMPLES_JSON__;
+
+    const picker = document.getElementById("picker");
+    const description = document.getElementById("description");
+    const container = document.getElementById("dos-container");
+
+    let current = null; // currently-running DosProps instance, or null
+    let switching = false; // guards against overlapping stop()/start() races
+
+    async function runExample(example) {
+      if (switching) return;
+      switching = true;
+
+      for (const button of picker.children) {
+        button.classList.toggle("active", button.dataset.file === example.file);
+        button.disabled = true;
+      }
+      description.textContent =
+        "Running " + example.bundle + ", compiled from src/" + example.file +
+        " with Turbo Pascal 7.0. " + example.description;
+
+      try {
+        if (current) {
+          await current.stop();
+          current = null;
+        }
+        await new Promise((resolve) => {
+          current = Dos(container, {
+            url: example.bundle,
+            onEvent(event) {
+              if (event === "ci-ready") resolve();
+            },
+          });
+        });
+      } catch (error) {
+        console.error("Unable to run example", error);
+        description.textContent = "Unable to run " + example.bundle + ": " + error;
+      } finally {
+        for (const button of picker.children) button.disabled = false;
+        switching = false;
+      }
+    }
+
+    for (const example of EXAMPLES) {
+      const button = document.createElement("button");
+      button.textContent = example.title;
+      button.dataset.file = example.file;
+      button.addEventListener("click", () => runExample(example));
+      picker.appendChild(button);
+    }
+
+    runExample(EXAMPLES[0]);
   </script>
 </body>
 </html>

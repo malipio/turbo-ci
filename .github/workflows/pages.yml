@@ -20,6 +20,8 @@ jobs:
         with:
           node-version: 20
 
+      - run: sudo apt-get update && sudo apt-get install -y dosbox
+
       - run: npm ci
 
       - run: node ci/fetch-tp7.js
@@ -45,6 +47,9 @@ jobs:
         if: github.event.action != 'closed'
         with:
           node-version: 20
+
+      - run: sudo apt-get update && sudo apt-get install -y dosbox
+        if: github.event.action != 'closed'
 
       - run: npm ci
         if: github.event.action != 'closed'
