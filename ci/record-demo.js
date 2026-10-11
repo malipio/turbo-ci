@@ -91,9 +91,9 @@ async function main() {
         "cycles=3000",
         "",
         "[sdl]",
-        "fullscreen=false",
+        "fullscreen=true",
         "output=surface",
-        `windowresolution=${SCREEN_SIZE}`,
+        `fullresolution=${SCREEN_SIZE}`,
         `title=${WINDOW_TITLE}`,
         "",
       ].join("\n")
@@ -138,7 +138,7 @@ async function main() {
     execFileSync(
       "ffmpeg",
       [
-        "-y", "-f", "x11grab", "-framerate", "30",
+        "-y", "-f", "x11grab", "-framerate", "30", "-draw_mouse", "0",
         "-video_size", SCREEN_SIZE, "-i", `${DISPLAY}.0`,
         "-t", String(RECORD_S),
         rawVideoPath,
