@@ -113,10 +113,19 @@ async function main() {
         "-c", `MOUNT C ${stageDir}`,
         "-c", "C:",
         "-c", `${name}.EXE`,
-        "-c", "exit",
         "-noautoexec",
       ],
-      { env: { ...process.env, DISPLAY }, stdio: "ignore" }
+      // No "-c exit": a fast-exiting program (e.g. hello.pas) would hand
+      // control back to the DOS prompt in milliseconds, and "exit" would
+      // then quit dosbox itself long before the boot buffer elapses,
+      // leaving nothing on screen to record. We kill dosbox ourselves
+      // once recording is done instead (see below).
+      //
+      // SDL_VIDEO_WINDOW_POS=0,0: with no window manager running under
+      // Xvfb, dosbox's window otherwise lands at +0+40 instead of +0+0 -
+      // its bottom 40px (e.g. the bottom of clock.pas's face) falls off
+      // the bottom of the screen and never gets captured.
+      { env: { ...process.env, DISPLAY, SDL_VIDEO_WINDOW_POS: "0,0" }, stdio: "ignore" }
     );
 
     await sleep(BOOT_BUFFER_MS);
