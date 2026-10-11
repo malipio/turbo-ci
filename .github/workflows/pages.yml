@@ -43,12 +43,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event.action != 'closed'
+        with:
+          filters: |
+            pas:
+              - 'src/**/*.pas'
+          list-files: json
+
       - uses: actions/setup-node@v4
         if: github.event.action != 'closed'
         with:
           node-version: 20
 
-      - run: sudo apt-get update && sudo apt-get install -y dosbox
+      - run: sudo apt-get update && sudo apt-get install -y dosbox ffmpeg xvfb xdotool
         if: github.event.action != 'closed'
 
       - run: npm ci
@@ -60,6 +69,33 @@ jobs:
       - run: node ci/build-site.js
         if: github.event.action != 'closed'
 
-      - uses: rossjrw/pr-preview-action@v1
+      - name: Record demo GIFs for changed examples
+        if: github.event.action != 'closed' && steps.filter.outputs.pas == 'true'
+        run: |
+          set -e
+          for path in $(echo '${{ steps.filter.outputs.pas_files }}' | jq -r '.[]'); do
+            node ci/record-demo.js "$(basename "$path")"
+          done
+
+      - id: preview-deploy
+        uses: rossjrw/pr-preview-action@v1
         with:
           source-dir: dist-site
+
+      - name: Compose demo comment
+        if: github.event.action != 'closed' && steps.filter.outputs.pas == 'true'
+        run: |
+          {
+            echo "### Demo recordings"
+            for f in dist-site/demo-*.gif; do
+              echo "![$(basename "$f" .gif)](${{ steps.preview-deploy.outputs.preview-url }}/$(basename "$f"))"
+              echo
+            done
+          } > "$RUNNER_TEMP/demo-comment.md"
+
+      - name: Comment demo GIFs
+        if: github.event.action != 'closed' && steps.filter.outputs.pas == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: demo-gifs
+          path: ${{ runner.temp }}/demo-comment.md
