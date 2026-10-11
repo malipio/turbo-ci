@@ -43,15 +43,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dorny/paths-filter@v3
-        id: filter
-        if: github.event.action != 'closed'
-        with:
-          filters: |
-            pas:
-              - 'src/**/*.pas'
-          list-files: json
-
       - uses: actions/setup-node@v4
         if: github.event.action != 'closed'
         with:
@@ -69,12 +60,12 @@ jobs:
       - run: node ci/build-site.js
         if: github.event.action != 'closed'
 
-      - name: Record demo GIFs for changed examples
-        if: github.event.action != 'closed' && steps.filter.outputs.pas == 'true'
+      - name: Record demo GIFs
+        if: github.event.action != 'closed'
         run: |
           set -e
-          for path in $(echo '${{ steps.filter.outputs.pas_files }}' | jq -r '.[]'); do
-            node ci/record-demo.js "$(basename "$path")"
+          for f in src/*.pas; do
+            node ci/record-demo.js "$(basename "$f")"
           done
 
       - id: preview-deploy
@@ -83,7 +74,7 @@ jobs:
           source-dir: dist-site
 
       - name: Compose demo comment
-        if: github.event.action != 'closed' && steps.filter.outputs.pas == 'true'
+        if: github.event.action != 'closed'
         run: |
           {
             echo "### Demo recordings"
@@ -94,7 +85,7 @@ jobs:
           } > "$RUNNER_TEMP/demo-comment.md"
 
       - name: Comment demo GIFs
-        if: github.event.action != 'closed' && steps.filter.outputs.pas == 'true'
+        if: github.event.action != 'closed'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: demo-gifs
