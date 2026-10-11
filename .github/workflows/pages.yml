@@ -79,7 +79,7 @@ jobs:
           {
             echo "### Demo recordings"
             for f in dist-site/demo-*.gif; do
-              echo "![$(basename "$f" .gif)](${{ steps.preview-deploy.outputs.preview-url }}/$(basename "$f"))"
+              echo "![$(basename "$f" .gif)](${{ steps.preview-deploy.outputs.preview-url }}/$(basename "$f")?sha=${{ github.sha }})"
               echo
             done
           } > "$RUNNER_TEMP/demo-comment.md"
