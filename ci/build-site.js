@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { execFileSync } = require("child_process");
 require("emulators");
 const { compileProgram, REPO_ROOT, TP7_DIR } = require("./lib/tp-bundle");
@@ -33,7 +34,10 @@ async function buildExample(example) {
   // cycle count instead.
   bundle.dosboxConf = bundle.dosboxConf.replace("cycles=auto", "cycles=3000");
   const bundleBytes = await bundle.toUint8Array();
-  const bundleFile = `${name.toLowerCase()}.jsdos`;
+  // Content-hash the filename so a new build of this example always gets a
+  // fresh URL, bypassing browser/CDN HTTP caching of the previous bundle.
+  const hash = crypto.createHash("sha256").update(bundleBytes).digest("hex").slice(0, 8);
+  const bundleFile = `${name.toLowerCase()}.${hash}.jsdos`;
   const bundlePath = path.join(SITE_OUT_DIR, bundleFile);
   fs.writeFileSync(bundlePath, bundleBytes);
 
