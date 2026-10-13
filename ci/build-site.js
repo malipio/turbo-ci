@@ -3,25 +3,13 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 require("emulators");
 const { compileProgram, REPO_ROOT, TP7_DIR } = require("./lib/tp-bundle");
+const { EXAMPLES } = require("./lib/examples");
 
 const emulators = global.emulators;
 emulators.pathPrefix = path.join(REPO_ROOT, "node_modules", "emulators", "dist") + "/";
 
 const SITE_SRC_DIR = path.join(REPO_ROOT, "site");
 const SITE_OUT_DIR = path.join(REPO_ROOT, "dist-site");
-
-const EXAMPLES = [
-  {
-    file: "hello.pas",
-    title: "hello.pas",
-    description: "A minimal Turbo Pascal program - prints a line of text to the console.",
-  },
-  {
-    file: "clock.pas",
-    title: "clock.pas",
-    description: "An analog clock drawn with the Graph (BGI) unit, updated once a second.",
-  },
-];
 
 async function buildExample(example) {
   const sourcePath = path.join(REPO_ROOT, "src", example.file);

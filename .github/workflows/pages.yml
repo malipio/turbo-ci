@@ -20,13 +20,20 @@ jobs:
         with:
           node-version: 20
 
-      - run: sudo apt-get update && sudo apt-get install -y dosbox
+      - run: sudo apt-get update && sudo apt-get install -y dosbox ffmpeg xvfb xdotool
 
       - run: npm ci
 
       - run: node ci/fetch-tp7.js
 
       - run: node ci/build-site.js
+
+      - name: Record demo GIFs
+        run: |
+          set -e
+          for f in src/*.pas; do
+            node ci/record-demo.js "$(basename "$f")"
+          done
 
       - uses: peaceiris/actions-gh-pages@v4
         with:
@@ -48,7 +55,7 @@ jobs:
         with:
           node-version: 20
 
-      - run: sudo apt-get update && sudo apt-get install -y dosbox
+      - run: sudo apt-get update && sudo apt-get install -y dosbox ffmpeg xvfb xdotool
         if: github.event.action != 'closed'
 
       - run: npm ci
@@ -60,6 +67,34 @@ jobs:
       - run: node ci/build-site.js
         if: github.event.action != 'closed'
 
-      - uses: rossjrw/pr-preview-action@v1
+      - name: Record demo GIFs
+        if: github.event.action != 'closed'
+        run: |
+          set -e
+          for f in src/*.pas; do
+            node ci/record-demo.js "$(basename "$f")"
+          done
+
+      - id: preview-deploy
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: rossjrw/pr-preview-action@v1
         with:
           source-dir: dist-site
+
+      - name: Compose demo comment
+        if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          {
+            echo "### Demo recordings"
+            for f in dist-site/demo-*.gif; do
+              echo "![$(basename "$f" .gif)](${{ steps.preview-deploy.outputs.preview-url }}/$(basename "$f")?sha=${{ github.sha }})"
+              echo
+            done
+          } > "$RUNNER_TEMP/demo-comment.md"
+
+      - name: Comment demo GIFs
+        if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: demo-gifs
+          path: ${{ runner.temp }}/demo-comment.md

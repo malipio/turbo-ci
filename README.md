@@ -10,6 +10,10 @@ of examples under [`src/`](src/) (currently `hello.pas` and an analog clock,
 `clock.pas`, drawn with the BGI `Graph` unit) and run them interactively,
 compiled with the real Turbo Pascal 7.0, right in your browser.
 
+| `hello.pas` | `clock.pas` |
+|:---:|:---:|
+| ![hello.pas demo](https://malipio.github.io/turbo-ci/demo-hello.gif) | ![clock.pas demo](https://malipio.github.io/turbo-ci/demo-clock.gif) |
+
 ## How it works
 
 - CI (`ci/run-dos.js`) compiles every `src/*.pas` file headlessly, using the
