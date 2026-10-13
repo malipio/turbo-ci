@@ -20,13 +20,20 @@ jobs:
         with:
           node-version: 20
 
-      - run: sudo apt-get update && sudo apt-get install -y dosbox
+      - run: sudo apt-get update && sudo apt-get install -y dosbox ffmpeg xvfb xdotool
 
       - run: npm ci
 
       - run: node ci/fetch-tp7.js
 
       - run: node ci/build-site.js
+
+      - name: Record demo GIFs
+        run: |
+          set -e
+          for f in src/*.pas; do
+            node ci/record-demo.js "$(basename "$f")"
+          done
 
       - uses: peaceiris/actions-gh-pages@v4
         with:
