@@ -69,12 +69,13 @@ jobs:
           done
 
       - id: preview-deploy
+        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: rossjrw/pr-preview-action@v1
         with:
           source-dir: dist-site
 
       - name: Compose demo comment
-        if: github.event.action != 'closed'
+        if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
         run: |
           {
             echo "### Demo recordings"
@@ -85,7 +86,7 @@ jobs:
           } > "$RUNNER_TEMP/demo-comment.md"
 
       - name: Comment demo GIFs
-        if: github.event.action != 'closed'
+        if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: demo-gifs

@@ -54,6 +54,18 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function spawnAwaited(cmd, args, opts = {}) {
+  const child = spawn(cmd, args, opts);
+  const done = new Promise((resolve, reject) => {
+    child.on("error", reject);
+    child.on("exit", (code, signal) => {
+      if (code === 0) resolve();
+      else reject(new Error(`${cmd} exited with code ${code}${signal ? ` (signal ${signal})` : ""}`));
+    });
+  });
+  return { child, done };
+}
+
 async function main() {
   const { file, speed, keys } = parseArgs(process.argv.slice(2));
 
@@ -79,6 +91,7 @@ async function main() {
   const stageDir = fs.mkdtempSync(path.join(os.tmpdir(), "demo-record-"));
   let xvfb;
   let dosbox;
+  let captureProc;
   try {
     fs.writeFileSync(path.join(stageDir, `${name}.EXE`), exeBytes);
     fs.copyFileSync(path.join(TP7_DIR, "EGAVGA.BGI"), path.join(stageDir, "EGAVGA.BGI"));
@@ -128,32 +141,56 @@ async function main() {
       { env: { ...process.env, DISPLAY, SDL_VIDEO_WINDOW_POS: "0,0" }, stdio: "ignore" }
     );
 
-    await sleep(BOOT_BUFFER_MS);
-
-    for (const { name: keyName, atMs } of keys) {
-      setTimeout(() => {
-        try {
-          execFileSync("xdotool", ["search", "--name", WINDOW_TITLE, "windowactivate", "key", keyName], {
-            env: { ...process.env, DISPLAY },
-          });
-        } catch (e) {
-          console.error(`failed to send key "${keyName}" at ${atMs}ms:`, e.message);
-        }
-      }, atMs);
-    }
+    const dosboxExited = new Promise((resolve) => {
+      dosbox.once("exit", (code, signal) => resolve({ code, signal }));
+      dosbox.once("error", (error) => resolve({ error }));
+    });
 
     const rawVideoPath = path.join(stageDir, "raw.mp4");
-    console.log(`recording ${RECORD_S}s ...`);
-    execFileSync(
-      "ffmpeg",
-      [
-        "-y", "-f", "x11grab", "-framerate", "30", "-draw_mouse", "0",
-        "-video_size", SCREEN_SIZE, "-i", `${DISPLAY}.0`,
-        "-t", String(RECORD_S),
-        rawVideoPath,
-      ],
-      { env: { ...process.env, DISPLAY }, stdio: "inherit" }
-    );
+    const recording = (async () => {
+      await sleep(BOOT_BUFFER_MS);
+
+      for (const { name: keyName, atMs } of keys) {
+        setTimeout(() => {
+          try {
+            execFileSync("xdotool", ["search", "--name", WINDOW_TITLE, "windowactivate", "key", keyName], {
+              env: { ...process.env, DISPLAY },
+            });
+          } catch (e) {
+            console.error(`failed to send key "${keyName}" at ${atMs}ms:`, e.message);
+          }
+        }, atMs);
+      }
+
+      console.log(`recording ${RECORD_S}s ...`);
+      const capture = spawnAwaited(
+        "ffmpeg",
+        [
+          "-y", "-f", "x11grab", "-framerate", "30", "-draw_mouse", "0",
+          "-video_size", SCREEN_SIZE, "-i", `${DISPLAY}.0`,
+          "-t", String(RECORD_S),
+          rawVideoPath,
+        ],
+        { env: { ...process.env, DISPLAY }, stdio: "inherit" }
+      );
+      captureProc = capture.child;
+      await capture.done;
+    })();
+
+    // setTimeout alone wouldn't fire key presses during a blocking ffmpeg
+    // capture, so the capture runs async and races against dosbox dying -
+    // if dosbox exits mid-recording (crash, etc.), ffmpeg would otherwise
+    // keep capturing a blank desktop and we'd still publish the GIF.
+    const outcome = await Promise.race([
+      recording.then(() => ({ type: "recorded" })),
+      dosboxExited.then((info) => ({ type: "dosbox-exited", info })),
+    ]);
+
+    if (outcome.type === "dosbox-exited") {
+      const { code, signal, error } = outcome.info;
+      const detail = error ? error.message : `code=${code} signal=${signal}`;
+      throw new Error(`dosbox exited unexpectedly before the recording finished (${detail})`);
+    }
 
     dosbox.kill("SIGTERM");
     xvfb.kill("SIGTERM");
@@ -188,6 +225,7 @@ async function main() {
 
     console.log(`demo-${basename}.gif`);
   } finally {
+    if (captureProc) captureProc.kill("SIGTERM");
     if (dosbox) dosbox.kill("SIGTERM");
     if (xvfb) xvfb.kill("SIGTERM");
     fs.rmSync(stageDir, { recursive: true, force: true });
