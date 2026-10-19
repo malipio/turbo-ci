@@ -24,6 +24,9 @@ async function buildExample(example) {
     throw new Error(`${sourcePath} did not produce an .EXE (compile error)`);
   }
 
+  const bgiPath = path.join(TP7_DIR, "EGAVGA.BGI");
+  const bgiBytes = fs.readFileSync(bgiPath);
+
   const bundle = await emulators.bundle();
   bundle.autoexec(`${name}.EXE`);
   // Turbo Pascal 7's Crt unit calibrates its Delay()/timer routines against
@@ -34,9 +37,13 @@ async function buildExample(example) {
   // cycle count instead.
   bundle.dosboxConf = bundle.dosboxConf.replace("cycles=auto", "cycles=3000");
   const bundleBytes = await bundle.toUint8Array();
-  // Content-hash the filename so a new build of this example always gets a
-  // fresh URL, bypassing browser/CDN HTTP caching of the previous bundle.
-  const hash = crypto.createHash("sha256").update(bundleBytes).digest("hex").slice(0, 8);
+  // Content-hash the actual delivered payload (the compiled .EXE plus
+  // EGAVGA.BGI) rather than the dosbox conf/autoexec skeleton above, so a
+  // new build of this example always gets a fresh URL - bypassing
+  // browser/CDN HTTP caching of the previous bundle - while staying stable
+  // (same filename) across rebuilds where the compiled output hasn't
+  // actually changed.
+  const hash = crypto.createHash("sha256").update(exeBytes).update(bgiBytes).digest("hex").slice(0, 8);
   const bundleFile = `${name.toLowerCase()}.${hash}.jsdos`;
   const bundlePath = path.join(SITE_OUT_DIR, bundleFile);
   fs.writeFileSync(bundlePath, bundleBytes);
@@ -49,7 +56,6 @@ async function buildExample(example) {
   // .EXE - it's a harmless unused file for non-graphics examples like hello.pas.
   const exePath = path.join(SITE_OUT_DIR, `${name}.EXE`);
   fs.writeFileSync(exePath, exeBytes);
-  const bgiPath = path.join(TP7_DIR, "EGAVGA.BGI");
   execFileSync("zip", ["-jq", bundlePath, exePath, bgiPath]);
   fs.rmSync(exePath);
 
