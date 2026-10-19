@@ -12,7 +12,7 @@ compiled with the real Turbo Pascal 7.0, right in your browser.
 
 | `hello.pas` | `clock.pas` |
 |:---:|:---:|
-| ![hello.pas demo](https://malipio.github.io/turbo-ci/demo-hello.gif) | ![clock.pas demo](https://malipio.github.io/turbo-ci/demo-clock.gif) |
+| ![hello.pas demo](https://malipio.github.io/turbo-ci/demo-hello.gif?sha=164d60382335668e2bcc8278a4d755eeff259598) | ![clock.pas demo](https://malipio.github.io/turbo-ci/demo-clock.gif?sha=164d60382335668e2bcc8278a4d755eeff259598) |
 
 ## How it works
 
