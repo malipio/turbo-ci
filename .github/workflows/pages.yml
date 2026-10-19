@@ -41,6 +41,52 @@ jobs:
           publish_dir: dist-site
           keep_files: true
 
+      - name: Update README demo GIF cache-busters
+        # Runs after the Pages deploy above so the sha-stamped README links
+        # never point at GIFs that haven't been published yet. Retries
+        # against the latest main tip in case something else pushed to main
+        # in the meantime, and never fails the job - the site deploy already
+        # succeeded by this point, so a README-only hiccup here is not fatal.
+        continue-on-error: true
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout origin/main -- README.md
+
+            node -e '
+              const fs = require("fs");
+              const sha = process.argv[1];
+              const readme = fs.readFileSync("README.md", "utf8");
+              const updated = readme.replace(
+                /(https:\/\/malipio\.github\.io\/turbo-ci\/demo-(?:hello|clock)\.gif)(\?[^)\s]*)?/g,
+                (_m, base) => `${base}?sha=${sha}`,
+              );
+              if (updated !== readme) fs.writeFileSync("README.md", updated);
+            ' "${{ github.sha }}"
+
+            if git diff --quiet README.md; then
+              echo "No README changes to commit."
+              exit 0
+            fi
+
+            git add README.md
+            git commit -m "Update README demo GIF cache-busters [skip ci]"
+
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+
+            echo "Push rejected (main moved), retrying ($attempt/3)..."
+            git reset --hard origin/main
+            sleep 2
+          done
+
+          echo "::warning::Failed to push README cache-buster update after 3 attempts; skipping (site deploy already succeeded)."
+
   deploy-pr-preview:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
